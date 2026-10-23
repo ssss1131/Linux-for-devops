@@ -30,6 +30,8 @@ Vagrant.configure("2") do |config|
       vm.vm.provision "shell", path: "scripts/02_permissions.sh", args: [node[:role]]
       vm.vm.provision "shell", path: "scripts/03_ssh.sh"
       vm.vm.provision "shell", path: "scripts/04_service.sh", args: [node[:role]]
+      vm.vm.provision "shell", path: "scripts/05_packages.sh", args: [node[:role]]
+      vm.vm.provision "shell", path: "scripts/06_firewall.sh", args: [node[:role]]
     end
   end
 end
