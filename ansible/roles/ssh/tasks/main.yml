@@ -1,0 +1,59 @@
+- name: Create keys folder on the control node
+  file:
+    path: "{{ playbook_dir }}/../keys"
+    state: directory
+  delegate_to: localhost
+  run_once: true
+  become: no
+
+- name: Generate key pair for automation_bot on the control node
+  command: ssh-keygen -t ed25519 -N "" -C automation_bot -f {{ bot_key }}
+  args:
+    creates: "{{ bot_key }}"
+  delegate_to: localhost
+  run_once: true
+  become: no
+
+- name: Create .ssh folder for automation_bot
+  file:
+    path: /home/automation_bot/.ssh
+    state: directory
+    owner: automation_bot
+    group: automation_bot
+    mode: "700"
+
+- name: Allow automation_bot to log in with the key
+  copy:
+    src: "{{ bot_key }}.pub"
+    dest: /home/automation_bot/.ssh/authorized_keys
+    owner: automation_bot
+    group: automation_bot
+    mode: "600"
+
+- name: Create /root/.ssh
+  file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: "700"
+
+- name: Copy private key of automation_bot for root
+  copy:
+    src: "{{ bot_key }}"
+    dest: /root/.ssh/automation_bot
+    owner: root
+    group: root
+    mode: "600"
+
+- name: Harden SSH server
+  copy:
+    content: |
+      PubkeyAuthentication yes
+      PasswordAuthentication no
+      PermitRootLogin no
+    dest: /etc/ssh/sshd_config.d/00-nc-ttp.conf
+    owner: root
+    group: root
+    mode: "644"
+  notify: Restart ssh

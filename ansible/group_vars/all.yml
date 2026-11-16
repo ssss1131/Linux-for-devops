@@ -1,0 +1,69 @@
+project: nc-ttp
+environment_name: dev
+timezone: Asia/Almaty
+
+web_ip: 192.168.56.10
+app_ip: 192.168.56.11
+db_ip: 192.168.56.12
+ops_ip: 192.168.56.13
+
+hosts_lines:
+  - "{{ web_ip }} nc-ttp-web"
+  - "{{ app_ip }} nc-ttp-app"
+  - "{{ db_ip }} nc-ttp-db"
+  - "{{ ops_ip }} nc-ttp-ops"
+
+base_packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - tree
+  - unzip
+  - jq
+  - net-tools
+  - netcat-openbsd
+  - ufw
+  - software-properties-common
+
+people_groups:
+  - nc-ttp-admin
+  - nc-ttp-deploy
+  - nc-ttp-audit
+  - nc-ttp-bot
+
+default_password: ChangeMe123
+
+people:
+  - name: saulet
+    groups: [nc-ttp-admin, sudo]
+    set_password: true
+  - name: deployer
+    groups: [nc-ttp-deploy]
+    set_password: true
+  - name: auditor
+    groups: [nc-ttp-audit]
+    set_password: true
+  - name: automation_bot
+    groups: [nc-ttp-bot, nc-ttp-deploy]
+    set_password: false
+
+sudo_rules:
+  - file: nc-ttp-admin
+    rule: "%nc-ttp-admin ALL=(ALL) ALL"
+  - file: nc-ttp-deploy
+    rule: "%nc-ttp-deploy ALL=(root) /usr/bin/systemctl start nc-ttp, /usr/bin/systemctl stop nc-ttp, /usr/bin/systemctl restart nc-ttp, /usr/bin/systemctl status nc-ttp"
+  - file: nc-ttp-audit
+    rule: "%nc-ttp-audit ALL=(root) NOPASSWD: /usr/bin/journalctl -u nc-ttp"
+  - file: zz-nc-ttp-bot
+    rule: "automation_bot ALL=(root) NOPASSWD: /usr/bin/systemctl restart nc-ttp, /usr/bin/systemctl status nc-ttp"
+
+base_dirs:
+  - { path: /opt/nc-ttp,         owner: root,   group: nc-ttp-deploy, mode: "775" }
+  - { path: /opt/nc-ttp/scripts, owner: root,   group: root,          mode: "755" }
+  - { path: /etc/nc-ttp,         owner: root,   group: nc-ttp,        mode: "750" }
+  - { path: /var/lib/nc-ttp,     owner: nc-ttp, group: nc-ttp,        mode: "750" }
+  - { path: /var/log/nc-ttp,     owner: nc-ttp, group: nc-ttp-audit,  mode: "750" }
+  - { path: /var/backups/nc-ttp, owner: root,   group: root,          mode: "700" }
+
+bot_key: "{{ playbook_dir }}/../keys/automation_bot"

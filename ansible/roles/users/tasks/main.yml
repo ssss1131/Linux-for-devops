@@ -1,0 +1,57 @@
+- name: Create groups for people
+  group:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ people_groups }}"
+
+- name: Create users for people
+  user:
+    name: "{{ item.name }}"
+    shell: /bin/bash
+    create_home: yes
+    groups: "{{ item.groups }}"
+    append: yes
+    password: "{{ default_password | password_hash('sha512') if item.set_password else omit }}"
+    update_password: on_create
+  loop: "{{ people }}"
+
+- name: Create service user nc-ttp
+  user:
+    name: nc-ttp
+    system: yes
+    create_home: no
+    home: /var/lib/nc-ttp
+    shell: /usr/sbin/nologin
+
+- name: Create monitoring service users on ops
+  user:
+    name: "{{ item }}"
+    system: yes
+    create_home: no
+    home: "/var/lib/nc-ttp/{{ item }}"
+    shell: /usr/sbin/nologin
+  loop:
+    - prometheus
+    - grafana
+  when: node_role == "ops"
+
+- name: Write sudo rules
+  copy:
+    content: "{{ item.rule }}\n"
+    dest: "/etc/sudoers.d/{{ item.file }}"
+    owner: root
+    group: root
+    mode: "440"
+    validate: visudo -cf %s
+  loop: "{{ sudo_rules }}"
+
+- name: Check sudoers file from the Vagrant box
+  stat:
+    path: /etc/sudoers.d/vagrant
+  register: vagrant_sudoers
+
+- name: Fix permissions of sudoers file from the Vagrant box
+  file:
+    path: /etc/sudoers.d/vagrant
+    mode: "440"
+  when: vagrant_sudoers.stat.exists

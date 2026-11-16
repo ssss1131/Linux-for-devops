@@ -1,0 +1,11 @@
+node_role: db
+
+pg_version: 16
+
+role_dirs:
+  - { path: /etc/nc-ttp/db,         owner: root, group: root, mode: "755" }
+  - { path: /var/backups/nc-ttp/db, owner: root, group: root, mode: "700" }
+
+firewall_rules:
+  - { port: 5432, from: "{{ app_ip }}", comment: postgres from app }
+  - { port: 9100, from: "{{ ops_ip }}", comment: metrics from ops }

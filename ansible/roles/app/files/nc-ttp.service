@@ -1,0 +1,13 @@
+[Unit]
+Description=NC-TTP table tennis service
+After=network.target
+
+[Service]
+User=nc-ttp
+Group=nc-ttp
+ExecStart=/usr/bin/python3 /opt/nc-ttp/app/nc_ttp_stub.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+- name: Check if git-core PPA is already added
+  command: grep -rlq git-core /etc/apt/sources.list.d
+  register: ppa_check
+  changed_when: false
+  failed_when: false
+
+- name: Add git-core PPA (package from a new repository)
+  command: add-apt-repository -y ppa:git-core/ppa
+  when: ppa_check.rc != 0
+
+- name: Install git from PPA
+  apt:
+    name: git
+    state: latest
+    update_cache: "{{ ppa_check.rc != 0 }}"
+
+- name: Install yq binary (package without a package manager)
+  get_url:
+    url: https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    dest: /usr/local/bin/yq
+    owner: root
+    group: root
+    mode: "755"

@@ -1,0 +1,11 @@
+node_role: ops
+
+role_dirs:
+  - { path: /etc/nc-ttp/prometheus,     owner: root,   group: root,   mode: "755" }
+  - { path: /etc/nc-ttp/grafana,        owner: root,   group: root,   mode: "755" }
+  - { path: /var/lib/nc-ttp/prometheus, owner: nc-ttp, group: nc-ttp, mode: "750" }
+  - { path: /var/lib/nc-ttp/grafana,    owner: nc-ttp, group: nc-ttp, mode: "750" }
+
+firewall_rules:
+  - { port: 3000, from: any, comment: grafana }
+  - { port: 9090, from: any, comment: prometheus }

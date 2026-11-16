@@ -1,0 +1,39 @@
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+
+- name: Copy database schema
+  copy:
+    src: init.sql
+    dest: /etc/nc-ttp/db/init.sql
+    owner: root
+    group: root
+    mode: "644"
+
+- name: Copy backup script
+  copy:
+    src: backup_db.sh
+    dest: /opt/nc-ttp/scripts/backup_db.sh
+    owner: root
+    group: root
+    mode: "750"
+
+- name: Listen on all network interfaces
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: Restart postgresql
+
+- name: Allow connections from app server
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/pg_hba.conf"
+    line: "host all all {{ app_ip }}/32 scram-sha-256"
+  notify: Restart postgresql
+
+- name: Start PostgreSQL and enable on boot
+  service:
+    name: postgresql
+    state: started
+    enabled: yes

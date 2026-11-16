@@ -1,0 +1,25 @@
+- name: Create common project directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ base_dirs }}"
+
+- name: Create directories for this server role
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ role_dirs }}"
+
+- name: Write node.env
+  template:
+    src: node.env.j2
+    dest: /etc/nc-ttp/node.env
+    owner: root
+    group: nc-ttp
+    mode: "640"

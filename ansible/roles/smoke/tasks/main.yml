@@ -1,0 +1,180 @@
+- name: "TEST base | timezone is {{ timezone }}"
+  command: timedatectl show -p Timezone --value
+  register: tz
+  changed_when: false
+  failed_when: tz.stdout != timezone
+
+- name: "TEST base | project servers are in /etc/hosts"
+  command: getent hosts nc-ttp-web nc-ttp-app nc-ttp-db nc-ttp-ops
+  changed_when: false
+
+- name: "TEST base | base packages are installed"
+  command: dpkg -s {{ base_packages | join(' ') }}
+  changed_when: false
+
+- name: "TEST users | groups for people exist"
+  command: getent group {{ people_groups | join(' ') }}
+  changed_when: false
+
+- name: "TEST users | people are in the right groups"
+  command: id -nG {{ item.name }}
+  register: user_groups
+  changed_when: false
+  failed_when: item.groups | difference(user_groups.stdout.split()) | length > 0
+  loop: "{{ people }}"
+
+- name: "TEST users | service user nc-ttp cannot log in"
+  command: getent passwd nc-ttp
+  register: svc_user
+  changed_when: false
+  failed_when: "'/usr/sbin/nologin' not in svc_user.stdout"
+
+- name: "TEST sudo | sudoers syntax is valid"
+  command: visudo -c
+  changed_when: false
+
+- name: "TEST sudo | automation_bot restarts nc-ttp without password"
+  command: sudo -u automation_bot sudo -n /usr/bin/systemctl status nc-ttp
+  register: bot_allowed
+  changed_when: false
+  failed_when: "'password' in bot_allowed.stderr"
+
+- name: "TEST sudo | automation_bot cannot read /etc/shadow"
+  command: sudo -u automation_bot sudo -n /usr/bin/cat /etc/shadow
+  register: bot_denied
+  changed_when: false
+  failed_when: bot_denied.rc == 0
+
+- name: "TEST filesystem | directories have right owner and mode"
+  command: stat -c "%U:%G %a" {{ item.path }}
+  register: dir_stat
+  changed_when: false
+  failed_when: dir_stat.stdout != item.owner ~ ':' ~ item.group ~ ' ' ~ item.mode
+  loop: "{{ base_dirs + role_dirs }}"
+
+- name: "TEST filesystem | node.env has role {{ node_role }}"
+  command: grep -q NODE_ROLE={{ node_role }} /etc/nc-ttp/node.env
+  changed_when: false
+
+- name: "TEST ssh | automation_bot has authorized_keys"
+  command: test -s /home/automation_bot/.ssh/authorized_keys
+  changed_when: false
+
+- name: "TEST ssh | password login is disabled"
+  command: sshd -T
+  register: sshd_conf
+  changed_when: false
+  failed_when: "'passwordauthentication no' not in sshd_conf.stdout"
+
+- name: "TEST ssh | automation_bot logs in to every server with the key"
+  command: >
+    ssh -i /root/.ssh/automation_bot
+    -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5
+    automation_bot@{{ hostvars[item].ansible_host }} whoami
+  register: bot_login
+  changed_when: false
+  failed_when: bot_login.stdout != "automation_bot"
+  loop: "{{ groups['all'] }}"
+  when: node_role == "ops"
+
+- name: "TEST packages | git is installed from git-core PPA"
+  command: apt-cache policy git
+  register: git_policy
+  changed_when: false
+  failed_when: "'git-core' not in git_policy.stdout"
+
+- name: "TEST packages | yq works"
+  command: yq --version
+  changed_when: false
+
+- name: "TEST firewall | ufw is active"
+  command: ufw status
+  register: ufw_status
+  changed_when: false
+  failed_when: "'Status: active' not in ufw_status.stdout"
+
+- name: "TEST firewall | ops cannot reach database port"
+  command: nc -z -w 2 {{ db_ip }} 5432
+  register: db_from_ops
+  changed_when: false
+  failed_when: db_from_ops.rc == 0
+  when: node_role == "ops"
+
+- name: "TEST web | nginx is active"
+  command: systemctl is-active nginx
+  changed_when: false
+  when: node_role == "web"
+
+- name: "TEST web | site answers on port 80"
+  command: curl -fs http://127.0.0.1/
+  register: site
+  changed_when: false
+  failed_when: "'NC-TTP' not in site.stdout"
+  when: node_role == "web"
+
+- name: "TEST web | /api/ is proxied to app server"
+  command: curl -fs http://127.0.0.1/api/
+  register: api
+  changed_when: false
+  failed_when: (api.stdout | from_json).status != "ok"
+  when: node_role == "web"
+
+- name: "TEST app | nc-ttp service is active and enabled"
+  command: systemctl is-{{ item }} nc-ttp
+  changed_when: false
+  loop:
+    - active
+    - enabled
+  when: node_role == "app"
+
+- name: "TEST app | nc-ttp runs as user nc-ttp"
+  command: systemctl show -p User --value nc-ttp
+  register: svc_owner
+  changed_when: false
+  failed_when: svc_owner.stdout != "nc-ttp"
+  when: node_role == "app"
+
+- name: "TEST app | port 8080 answers"
+  command: curl -fs http://127.0.0.1:8080
+  register: app_answer
+  changed_when: false
+  failed_when: (app_answer.stdout | from_json).status != "ok"
+  when: node_role == "app"
+
+- name: "TEST app | database port is open from app"
+  command: nc -z -w 2 {{ db_ip }} 5432
+  changed_when: false
+  when: node_role == "app"
+
+- name: "TEST db | postgresql is active"
+  command: systemctl is-active postgresql
+  changed_when: false
+  when: node_role == "db"
+
+- name: "TEST db | postgres answers SQL"
+  command: sudo -u postgres psql -tAc "SELECT version();"
+  register: pg_version_out
+  changed_when: false
+  failed_when: "'PostgreSQL' not in pg_version_out.stdout"
+  when: node_role == "db"
+
+- name: "TEST db | postgres listens on the network"
+  command: ss -ltn
+  register: pg_ports
+  changed_when: false
+  failed_when: "'0.0.0.0:5432' not in pg_ports.stdout"
+  when: node_role == "db"
+
+- name: "TEST ops | node exporter is active"
+  command: systemctl is-active prometheus-node-exporter
+  changed_when: false
+  when: node_role == "ops"
+
+- name: "TEST ops | metrics answer on port 9100"
+  command: curl -fs -o /dev/null http://127.0.0.1:9100/metrics
+  changed_when: false
+  when: node_role == "ops"
+
+- name: "RESULT"
+  debug:
+    msg: "All smoke tests passed on {{ inventory_hostname }} (role {{ node_role }})"

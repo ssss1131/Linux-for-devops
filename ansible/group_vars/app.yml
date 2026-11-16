@@ -1,0 +1,12 @@
+node_role: app
+
+role_dirs:
+  - { path: /opt/nc-ttp/app,                 owner: root,   group: nc-ttp-deploy, mode: "775" }
+  - { path: /opt/nc-ttp/releases,            owner: root,   group: nc-ttp-deploy, mode: "775" }
+  - { path: /var/lib/nc-ttp/uploads,         owner: nc-ttp, group: nc-ttp,        mode: "750" }
+  - { path: /var/lib/nc-ttp/uploads/avatars, owner: nc-ttp, group: nc-ttp,        mode: "750" }
+  - { path: /var/lib/nc-ttp/tmp,             owner: nc-ttp, group: nc-ttp,        mode: "750" }
+
+firewall_rules:
+  - { port: 8080, from: "{{ web_ip }}", comment: api from web }
+  - { port: 8080, from: "{{ ops_ip }}", comment: metrics from ops }

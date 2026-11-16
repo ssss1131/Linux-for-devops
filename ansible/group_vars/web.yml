@@ -1,0 +1,12 @@
+node_role: web
+
+role_dirs:
+  - { path: /etc/nc-ttp/nginx, owner: root,   group: root,     mode: "755" }
+  - { path: /etc/nc-ttp/ssl,   owner: root,   group: root,     mode: "700" }
+  - { path: /srv/nc-ttp,       owner: nc-ttp, group: www-data, mode: "750" }
+  - { path: /srv/nc-ttp/www,   owner: nc-ttp, group: www-data, mode: "750" }
+
+firewall_rules:
+  - { port: 80,   from: any,          comment: http }
+  - { port: 443,  from: any,          comment: https }
+  - { port: 9100, from: "{{ ops_ip }}", comment: metrics from ops }

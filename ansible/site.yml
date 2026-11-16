@@ -1,0 +1,40 @@
+- name: Common setup for all servers
+  hosts: all
+  become: yes
+  roles:
+    - { role: base, tags: base }
+    - { role: users, tags: users }
+    - { role: filesystem, tags: filesystem }
+    - { role: ssh, tags: ssh }
+    - { role: packages, tags: packages }
+    - { role: firewall, tags: firewall }
+
+- name: Web server
+  hosts: web
+  become: yes
+  roles:
+    - { role: web, tags: web }
+
+- name: App server
+  hosts: app
+  become: yes
+  roles:
+    - { role: app, tags: app }
+
+- name: Database server
+  hosts: db
+  become: yes
+  roles:
+    - { role: db, tags: db }
+
+- name: Ops server
+  hosts: ops
+  become: yes
+  roles:
+    - { role: ops, tags: ops }
+
+- name: Smoke tests
+  hosts: all
+  become: yes
+  roles:
+    - { role: smoke, tags: smoke }

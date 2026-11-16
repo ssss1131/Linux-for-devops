@@ -1,0 +1,44 @@
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Copy nginx site config
+  copy:
+    src: nc-ttp.conf
+    dest: /etc/nc-ttp/nginx/nc-ttp.conf
+    owner: root
+    group: root
+    mode: "644"
+  notify: Reload nginx
+
+- name: Copy index.html
+  copy:
+    src: index.html
+    dest: /srv/nc-ttp/www/index.html
+    owner: nc-ttp
+    group: www-data
+    mode: "640"
+
+- name: Enable nc-ttp site in nginx
+  file:
+    src: /etc/nc-ttp/nginx/nc-ttp.conf
+    dest: /etc/nginx/sites-enabled/nc-ttp.conf
+    state: link
+  notify: Reload nginx
+
+- name: Disable default nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Check nginx config
+  command: nginx -t
+  changed_when: false
+
+- name: Start nginx and enable on boot
+  service:
+    name: nginx
+    state: started
+    enabled: yes

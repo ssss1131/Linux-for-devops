@@ -1,0 +1,29 @@
+- name: Deny all incoming by default
+  community.general.ufw:
+    default: deny
+    direction: incoming
+
+- name: Allow all outgoing by default
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+- name: Allow SSH for everybody
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    comment: ssh
+
+- name: Allow ports for this server role
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: tcp
+    from_ip: "{{ item.from }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ firewall_rules }}"
+
+- name: Enable firewall
+  community.general.ufw:
+    state: enabled

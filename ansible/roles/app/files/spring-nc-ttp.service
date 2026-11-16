@@ -1,0 +1,14 @@
+[Unit]
+Description=NC-TTP backend
+After=network.target
+
+[Service]
+User=nc-ttp
+Group=nc-ttp
+EnvironmentFile=/etc/nc-ttp/secrets.env
+WorkingDirectory=/opt/nc-ttp/app
+ExecStart=/usr/bin/java -jar /opt/nc-ttp/app/nc-ttp.jar --spring.config.additional-location=/etc/nc-ttp/application.yml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

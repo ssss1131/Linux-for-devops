@@ -1,0 +1,61 @@
+- name: Install python3-pip
+  apt:
+    name: python3-pip
+    state: present
+
+- name: Copy application config
+  copy:
+    src: application.yml
+    dest: /etc/nc-ttp/application.yml
+    owner: root
+    group: nc-ttp
+    mode: "640"
+
+- name: Copy secrets
+  copy:
+    src: secrets.env
+    dest: /etc/nc-ttp/secrets.env
+    owner: root
+    group: nc-ttp
+    mode: "640"
+
+- name: Copy unit file for the future Spring Boot app
+  copy:
+    src: spring-nc-ttp.service
+    dest: /opt/nc-ttp/app/nc-ttp.service
+    owner: root
+    group: root
+    mode: "644"
+
+- name: Copy README for releases
+  copy:
+    src: README.txt
+    dest: /opt/nc-ttp/app/README.txt
+    owner: root
+    group: root
+    mode: "644"
+
+- name: Copy stub application
+  copy:
+    src: nc_ttp_stub.py
+    dest: /opt/nc-ttp/app/nc_ttp_stub.py
+    owner: root
+    group: nc-ttp-deploy
+    mode: "644"
+  notify: Restart nc-ttp
+
+- name: Copy systemd unit for nc-ttp
+  copy:
+    src: nc-ttp.service
+    dest: /etc/systemd/system/nc-ttp.service
+    owner: root
+    group: root
+    mode: "644"
+  notify: Restart nc-ttp
+
+- name: Start nc-ttp and enable on boot
+  systemd:
+    name: nc-ttp
+    state: started
+    enabled: yes
+    daemon_reload: yes
